@@ -152,6 +152,9 @@ RUN install2.r --error \
 	smoothr \
 	crew
 	
+## install qs from CRAN archive (removed from CRAN 2026-01-17, last version 0.27.3)
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/qs/qs_0.27.3.tar.gz', repos = NULL, type = 'source')"
+
 ## install additional libraries from custom repos including cmdstanr - note the path below is important for loading library in container
 RUN R -e "remotes::install_github('futureverse/parallelly', ref='master'); \
           install.packages('cmdstanr', repos = c('https://stan-dev.r-universe.dev', getOption('repos'))) ; \
