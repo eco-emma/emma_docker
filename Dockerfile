@@ -157,7 +157,8 @@ RUN install2.r --error \
 	webshot2 \
 	memoise \
   	htmlwidgets \
-  	patchwork
+  	patchwork \
+	languageserver
 
 	
 ## install additional libraries from custom repos including cmdstanr - note the path below is important for loading library in container
