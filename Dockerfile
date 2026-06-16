@@ -37,6 +37,10 @@ RUN apt-get update \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
+# Chromium for webshot2 (headless screenshots of htmlwidgets)
+RUN apt-get update && apt-get install -y chromium && apt-get clean && rm -rf /var/lib/apt/lists/*
+ENV CHROMOTE_CHROME=/usr/bin/chromium
+
 # Ensure PROJ can find its database in containerised/Apptainer runs
 ENV PROJ_LIB=/usr/share/proj
 
