@@ -38,8 +38,16 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 ## Install Quarto library
-RUN wget https://quarto.org/download/latest/quarto-linux-amd64.deb && \
-    sudo dpkg -i quarto-linux-amd64.deb
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "amd64" ]; then \
+        QUARTO_ARCH="amd64"; \
+    elif [ "$ARCH" = "arm64" ]; then \
+        QUARTO_ARCH="arm64"; \
+    else \
+        echo "Unsupported architecture: $ARCH" && exit 1; \
+    fi && \
+    wget https://quarto.org/download/latest/quarto-linux-${QUARTO_ARCH}.deb && \
+    dpkg -i quarto-linux-${QUARTO_ARCH}.deb
 
 # Install git-lfs #from https://github.com/git-lfs/git-lfs/blob/main/INSTALLING.md
 RUN apt-get update && \
