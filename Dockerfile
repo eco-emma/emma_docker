@@ -56,23 +56,18 @@ RUN apt-get update && \
 	apt-get install -f git-lfs && \
 	git lfs install
 
-# Install Miniconda
-ENV MINICONDA_VERSION=py39_24.1.2-0
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -O miniconda.sh && \
-    bash miniconda.sh -b -p /opt/conda && \
-    rm miniconda.sh
-
-ENV PATH=/opt/conda/bin:$PATH
-ENV CONDA_PATH=/opt/conda/bin/conda
-
-# Create a conda environment with Python 3.9 and compatible OpenSSL (default python was giving problems with openssl 3.3
-RUN conda create -y -n r-reticulate python=3.9 openssl=3.0 \
-    numpy pyopenssl
-
-# Activate conda env and set it as default for reticulate
-ENV RETICULATE_PYTHON=/opt/conda/envs/r-reticulate/bin/python
-ENV RETICULATE_ENV=/opt/conda/envs/r-reticulate
-
+# Install Python
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "amd64" ]; then \
+        CONDA_ARCH="x86_64"; \
+    elif [ "$ARCH" = "arm64" ]; then \
+        CONDA_ARCH="aarch64"; \
+    else \
+        echo "Unsupported arch: $ARCH" && exit 1; \
+    fi && \
+    wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-${CONDA_ARCH}.sh -O miniforge.sh && \
+    bash miniforge.sh -b -p /opt/conda && \
+    rm miniforge.sh
 
 RUN install2.r --error \
     testthat \
@@ -170,16 +165,3 @@ RUN R -e "remotes::install_github('futureverse/parallelly', ref='master'); \
           install.packages('webshot'); \
           webshot::install_phantomjs(); \
           devtools::install_github('JoshOBrien/gdalUtilities')"
-
-# Install rgee Python dependencies
-RUN ARCH=$(dpkg --print-architecture) && \
-    if [ "$ARCH" = "amd64" ]; then \
-        CONDA_ARCH="x86_64"; \
-    elif [ "$ARCH" = "arm64" ]; then \
-        CONDA_ARCH="aarch64"; \
-    else \
-        echo "Unsupported arch: $ARCH" && exit 1; \
-    fi && \
-    wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-${CONDA_ARCH}.sh -O miniforge.sh && \
-    bash miniforge.sh -b -p /opt/conda && \
-    rm miniforge.sh
