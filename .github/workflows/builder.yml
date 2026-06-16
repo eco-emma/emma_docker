@@ -23,8 +23,12 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v7
         with:
+          context: .
           push: true
-          tags: adamwilsonlab/emma:latest
+        platforms: linux/amd64,linux/arm64
+        tags: adamwilsonlab/emma:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max        
         env:
           ACTIONS_RUNNER_DEBUG: true
 
