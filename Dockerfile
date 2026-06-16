@@ -172,17 +172,14 @@ RUN R -e "remotes::install_github('futureverse/parallelly', ref='master'); \
           devtools::install_github('JoshOBrien/gdalUtilities')"
 
 # Install rgee Python dependencies
-RUN R -e "options(reticulate.conda_binary = Sys.getenv('CONDA_PATH')); \
-          reticulate::use_condaenv(Sys.getenv('RETICULATE_ENV')); \
-          print(reticulate::py_config()); \
-          reticulate::conda_install(c('ncurses','pyCrypto','fermipy','numpy','earthengine-api','pyOpenSSL>=0.11'),envname='r-reticulate'); \
-          print(reticulate::py_config())"
-
-RUN R -e "remotes::install_github('r-spatial/rgee',upgrade='always'); \
-          print(reticulate::py_config()); \
-          rgee::ee_install_set_pyenv(py_path = Sys.getenv('RETICULATE_PYTHON'),py_env = 'r-reticulate'); \
-          print(reticulate::py_config()); \
-	  HOME <- Sys.getenv('HOME'); \
-          system('curl -sSL https://sdk.cloud.google.com | bash'); \
-          Sys.setenv('EARTHENGINE_GCLOUD' = sprintf('%s/google-cloud-sdk/bin/', HOME))"
-  
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "amd64" ]; then \
+        CONDA_ARCH="x86_64"; \
+    elif [ "$ARCH" = "arm64" ]; then \
+        CONDA_ARCH="aarch64"; \
+    else \
+        echo "Unsupported arch: $ARCH" && exit 1; \
+    fi && \
+    wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-${CONDA_ARCH}.sh -O miniforge.sh && \
+    bash miniforge.sh -b -p /opt/conda && \
+    rm miniforge.sh
