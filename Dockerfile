@@ -154,7 +154,11 @@ RUN install2.r --error \
 	qs2 \
 	smoothr \
 	crew \
-	webshot2
+	webshot2 \
+	memoise \
+  	htmlwidgets \
+  	patchwork
+
 	
 ## install additional libraries from custom repos including cmdstanr - note the path below is important for loading library in container
 RUN R -e "remotes::install_github('futureverse/parallelly', ref='master'); \
