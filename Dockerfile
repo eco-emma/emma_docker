@@ -37,6 +37,9 @@ RUN apt-get update \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
+# Ensure PROJ can find its database in containerised/Apptainer runs
+ENV PROJ_LIB=/usr/share/proj
+
 ## Install Quarto library
 RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "amd64" ]; then \
