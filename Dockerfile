@@ -153,7 +153,8 @@ RUN install2.r --error \
 	colourvalues \
 	qs2 \
 	smoothr \
-	crew
+	crew \
+	webshot2
 	
 ## install additional libraries from custom repos including cmdstanr - note the path below is important for loading library in container
 RUN R -e "remotes::install_github('futureverse/parallelly', ref='master'); \
