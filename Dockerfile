@@ -37,10 +37,6 @@ RUN apt-get update \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-# Chromium for webshot2 (headless screenshots of htmlwidgets)
-RUN apt-get update && apt-get install -y chromium && apt-get clean && rm -rf /var/lib/apt/lists/*
-ENV CHROMOTE_CHROME=/usr/bin/chromium
-
 # Ensure PROJ can find its database in containerised/Apptainer runs
 ENV PROJ_LIB=/usr/share/proj
 
@@ -167,7 +163,14 @@ RUN install2.r --error \
   	patchwork \
 	languageserver
 
+# Install Quarto's bundled chrome-headless-shell (a real Chromium binary, works
+# in Docker unlike the Ubuntu 'chromium' snap stub).
+# Must run AFTER quarto is installed so the 'quarto' CLI is available.
 RUN quarto install chrome-headless-shell
+# Point chromote (used by webshot2) at Quarto's headless shell.
+# This path is where 'quarto install chrome-headless-shell' places the binary.
+ENV CHROMOTE_CHROME=/root/.local/share/quarto/chrome-headless-shell/chrome-linux/headless_shell
+
 	
 ## install additional libraries from custom repos including cmdstanr - note the path below is important for loading library in container
 RUN R -e "remotes::install_github('futureverse/parallelly', ref='master'); \
