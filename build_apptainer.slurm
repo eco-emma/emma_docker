@@ -26,14 +26,20 @@ export PROJECT_FOLDER="/projects/academic/${GROUP}"
 
 # define local working folder to build the SIF file (this is faster than network storage)
 export APPTAINER_CACHEDIR="/vscratch/grp-adamw/${USER}/apptainer"
-export APPTAINER_TMPDIR="${APPTAINER_CACHEDIR}/tmp"
-export APPTAINER_LOCALCACHEDIR="${APPTAINER_CACHEDIR}/tmp"
+
+# Use node-local /tmp for the actual build temp dir — vscratch is often mounted
+# noexec which prevents proot/mksquashfs from executing binaries during the build.
+export APPTAINER_TMPDIR="/tmp/${USER}_apptainer_$$"
+export APPTAINER_LOCALCACHEDIR=$APPTAINER_TMPDIR
 
 # set singularity cache and tmp directories to the same as apptainer
 # needed because CCR is still using singularity and it will use these directories
 export SINGULARITY_CACHEDIR=$APPTAINER_CACHEDIR
 export SINGULARITY_TMPDIR=$APPTAINER_TMPDIR
 export SINGULARITY_LOCALCACHEDIR=$APPTAINER_LOCALCACHEDIR
+
+# also set TMPDIR so mksquashfs and other subprocesses use local /tmp
+export TMPDIR=$APPTAINER_TMPDIR
 
 # path to docker image and name of the resulting SIF file
 export DOCKER_PATH="docker://adamwilsonlab/emma:latest"
