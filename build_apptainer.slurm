@@ -52,9 +52,11 @@ echo ""
 
 # Create the folders if they don't already exist
 mkdir -p "${SIF_PATH}"
-mkdir -p "${APPTAINER_CACHEDIR}/tmp"
 mkdir -p "${APPTAINER_CACHEDIR}/run"
 mkdir -p "${APPTAINER_CACHEDIR}/rstudio"
+# create the node-local build temp dir and clean it up when the job exits
+mkdir -p "${APPTAINER_TMPDIR}"
+trap "rm -rf '${APPTAINER_TMPDIR}'" EXIT
 
 # go to cachedir for faster build
 cd "${APPTAINER_CACHEDIR}" || { echo "ERROR: could not cd to ${APPTAINER_CACHEDIR}"; exit 1; }
