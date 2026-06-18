@@ -62,13 +62,12 @@ trap "rm -rf '${APPTAINER_TMPDIR}'" EXIT
 cd "${APPTAINER_CACHEDIR}" || { echo "ERROR: could not cd to ${APPTAINER_CACHEDIR}"; exit 1; }
 
 ## Build the singularity/apptainer image (.SIF) directly from Docker image
-# PROOT_NO_SECCOMP=1 is required on kernels that block ptrace via seccomp,
-# which causes mksquashfs to fail with "ptrace(TRACEME): Operation not permitted"
-# See: https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1202161
-export PROOT_NO_SECCOMP=1
+# --fakeroot uses Linux user namespaces instead of proot, bypassing the
+# ptrace/seccomp restrictions enforced on CCR compute nodes.
+# (proot-based builds fail with "ptrace(TRACEME): Operation not permitted")
 
 echo "Starting apptainer build at $(date) ..."
-singularity build --force "${SIF_FILE}" "${DOCKER_PATH}"
+singularity build --fakeroot --force "${SIF_FILE}" "${DOCKER_PATH}"
 BUILD_STATUS=$?
 
 if [ $BUILD_STATUS -ne 0 ]; then
