@@ -1,0 +1,21 @@
+---
+description: Require tidyverse R style for any R in emma_docker
+globs: "**/*.{R,r}"
+alwaysApply: false
+---
+
+# R tidyverse style
+
+Follow the [tidyverse style guide](https://style.tidyverse.org) for all R in
+this repository.
+
+- Prefer tidyverse idioms (`dplyr`, `tidyr`, `purrr`, `ggplot2`, `readr`, `tibble`)
+  when they fit the task.
+- Use the native pipe `|>` (not `%>%`).
+- 2-space indentation; aim for ~80-character lines.
+- Use `snake_case` for objects and functions.
+- Prefer named intermediate objects over deeply nested one-liners when clearer.
+- Style-only edits must preserve behavior.
+
+Project pointers: `AGENTS.md`, `.github/instructions/r-style.instructions.md`,
+`.github/copilot-instructions.md`.
