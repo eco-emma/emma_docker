@@ -7,22 +7,18 @@ ENV DISPLAY=:99
 # ── Package pin (source of truth for R library versions) ─────────────────────
 # Date-stamped Posit Package Manager snapshot. Do NOT use renv in this image;
 # consumers (laptop / GHA / Singularity) use the baked site-library as-is.
-ENV R_CRAN_SNAPSHOT=https://packagemanager.posit.co/cran/2026-10-01
+# Prefer Ubuntu binary URLs (set after apt when VERSION_CODENAME is known).
+ENV R_CRAN_DATE=2026-10-01
 ENV R_UNIVERSE_STAN=https://stan-dev.r-universe.dev
 ENV R_UNIVERSE_ROPENSCI=https://ropensci.r-universe.dev
 
-# Make the P3M snapshot the default CRAN for all R sessions in the image
-RUN printf '%s\n' \
-  "options(repos = c(" \
-  "  stan = Sys.getenv('R_UNIVERSE_STAN', 'https://stan-dev.r-universe.dev')," \
-  "  ropensci = Sys.getenv('R_UNIVERSE_ROPENSCI', 'https://ropensci.r-universe.dev')," \
-  "  CRAN = Sys.getenv('R_CRAN_SNAPSHOT', 'https://cloud.r-project.org')" \
-  "))" \
-  > /usr/local/lib/R/etc/Rprofile.site
-
 ## System libraries required by geospatial / EMMA R packages
+# cmake: required to build RcppParallel (qs2 dependency) from source
+# libtbb-dev: optional accel for RcppParallel / CmdStan tooling
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
+    cmake \
+    libtbb-dev \
     libv8-dev \
     lbzip2 \
     libfftw3-dev \
@@ -52,6 +48,21 @@ RUN apt-get update \
     gh \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
+
+# Pin CRAN to P3M Linux binaries for this Ubuntu codename.
+# Use $$ so Docker leaves shell expansions alone (VERSION_CODENAME is not an ENV).
+RUN . /etc/os-release \
+ && mkdir -p /etc/R \
+ && CRAN_BIN="https://packagemanager.posit.co/cran/__linux__/$${VERSION_CODENAME}/$${R_CRAN_DATE}" \
+ && echo "$${CRAN_BIN}" > /etc/R/cran-url \
+ && printf '%s\n' \
+  "options(repos = c(" \
+  "  stan = Sys.getenv('R_UNIVERSE_STAN', 'https://stan-dev.r-universe.dev')," \
+  "  ropensci = Sys.getenv('R_UNIVERSE_ROPENSCI', 'https://ropensci.r-universe.dev')," \
+  "  CRAN = '$${CRAN_BIN}'" \
+  "))" \
+  > /usr/local/lib/R/etc/Rprofile.site \
+ && echo "CRAN pin: $${CRAN_BIN}"
 
 # PROJ database path — required under Docker and Apptainer/Singularity
 ENV PROJ_LIB=/usr/share/proj
@@ -85,7 +96,13 @@ ENV PATH="/opt/conda/bin:${PATH}"
 
 # ── R packages from pinned P3M snapshot (image = source of truth) ────────────
 # Explicit list only — no renv::restore(), no update.packages().
-RUN install2.r --error -r "${R_CRAN_SNAPSHOT}" \
+# Install qs2 deps (RcppParallel, stringfish) first so a failed parallel dep
+# cannot leave qs2 half-resolved under install2.r --error.
+RUN CRAN_URL="$$(cat /etc/R/cran-url)" \
+ && install2.r --error -r "$${CRAN_URL}" \
+      RcppParallel \
+      stringfish \
+ && install2.r --error -r "$${CRAN_URL}" \
     testthat \
     remotes \
     globals \
@@ -168,10 +185,11 @@ RUN install2.r --error -r "${R_CRAN_SNAPSHOT}" \
     webshot
 
 # r-universe / non-CRAN packages (still versioned by their published builds)
-RUN R -e "options(repos = c( \
+RUN CRAN_URL="$$(cat /etc/R/cran-url)" \
+ && R -e "options(repos = c( \
             stan = Sys.getenv('R_UNIVERSE_STAN'), \
             ropensci = Sys.getenv('R_UNIVERSE_ROPENSCI'), \
-            CRAN = Sys.getenv('R_CRAN_SNAPSHOT') \
+            CRAN = '$${CRAN_URL}' \
           )); \
           install.packages(c('cmdstanr', 'posterior', 'bayesplot', 'geotargets', 'stantargets')); \
           install.packages( \
