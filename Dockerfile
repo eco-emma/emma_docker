@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM rocker/geospatial
 LABEL maintainer="Adam M. Wilson <adamw@buffalo.edu>"
 
@@ -50,19 +51,23 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # Pin CRAN to P3M Linux binaries for this Ubuntu codename.
-# Use $$ so Docker leaves shell expansions alone (VERSION_CODENAME is not an ENV).
-RUN . /etc/os-release \
- && mkdir -p /etc/R \
- && CRAN_BIN="https://packagemanager.posit.co/cran/__linux__/$${VERSION_CODENAME}/$${R_CRAN_DATE}" \
- && echo "$${CRAN_BIN}" > /etc/R/cran-url \
- && printf '%s\n' \
+# Quoted heredoc: Docker must not touch $… (plain RUN + $$ was passed through as
+# shell PID, producing broken URLs like 1{CRAN_BIN}).
+RUN <<'EOF'
+set -eux
+. /etc/os-release
+mkdir -p /etc/R
+CRAN_BIN="https://packagemanager.posit.co/cran/__linux__/${VERSION_CODENAME}/${R_CRAN_DATE}"
+echo "${CRAN_BIN}" > /etc/R/cran-url
+printf '%s\n' \
   "options(repos = c(" \
   "  stan = Sys.getenv('R_UNIVERSE_STAN', 'https://stan-dev.r-universe.dev')," \
   "  ropensci = Sys.getenv('R_UNIVERSE_ROPENSCI', 'https://ropensci.r-universe.dev')," \
-  "  CRAN = '$${CRAN_BIN}'" \
+  "  CRAN = '${CRAN_BIN}'" \
   "))" \
-  > /usr/local/lib/R/etc/Rprofile.site \
- && echo "CRAN pin: $${CRAN_BIN}"
+  > /usr/local/lib/R/etc/Rprofile.site
+echo "CRAN pin: ${CRAN_BIN}"
+EOF
 
 # PROJ database path — required under Docker and Apptainer/Singularity
 ENV PROJ_LIB=/usr/share/proj
@@ -98,105 +103,111 @@ ENV PATH="/opt/conda/bin:${PATH}"
 # Explicit list only — no renv::restore(), no update.packages().
 # Install qs2 deps (RcppParallel, stringfish) first so a failed parallel dep
 # cannot leave qs2 half-resolved under install2.r --error.
-RUN CRAN_URL="$$(cat /etc/R/cran-url)" \
- && install2.r --error -r "$${CRAN_URL}" \
-      RcppParallel \
-      stringfish \
- && install2.r --error -r "$${CRAN_URL}" \
-    testthat \
-    remotes \
-    globals \
-    fs \
-    writexl \
-    rio \
-    tidyverse \
-    listenv \
-    RCurl \
-    questionr \
-    stringr \
-    knitr \
-    cptcity \
-    geojsonio \
-    targets \
-    tarchetypes \
-    visNetwork \
-    googleCloudStorageR \
-    janitor \
-    qpdf \
-    RefManageR \
-    svMisc \
-    jose \
-    cubelyr \
-    rdryad \
-    doParallel \
-    piggyback \
-    arrow \
-    bibtex \
-    proto \
-    slam \
-    ape \
-    fasterize \
-    exactextractr \
-    RcppEigen \
-    jpeg \
-    interp \
-    latticeExtra \
-    hexbin \
-    prioritizr \
-    dygraphs \
-    ggridges \
-    GSODR \
-    gt \
-    leafem \
-    leaflet \
-    lubridate \
-    mapview \
-    plotly \
-    quarto \
-    raster \
-    rinat \
-    rmarkdown \
-    sf \
-    SPEI \
-    stars \
-    terra \
-    tidyterra \
-    xts \
-    reticulate \
-    cowplot \
-    appeears \
-    keyring \
-    filelock \
-    ncdf4 \
-    colourvalues \
-    kableExtra \
-    future \
-    viridis \
-    qs2 \
-    smoothr \
-    crew \
-    webshot2 \
-    memoise \
-    htmlwidgets \
-    patchwork \
-    languageserver \
-    parallelly \
-    gdalUtilities \
-    webshot
+RUN <<'EOF'
+set -eux
+CRAN_URL="$(cat /etc/R/cran-url)"
+install2.r --error -r "${CRAN_URL}" \
+  RcppParallel \
+  stringfish
+install2.r --error -r "${CRAN_URL}" \
+  testthat \
+  remotes \
+  globals \
+  fs \
+  writexl \
+  rio \
+  tidyverse \
+  listenv \
+  RCurl \
+  questionr \
+  stringr \
+  knitr \
+  cptcity \
+  geojsonio \
+  targets \
+  tarchetypes \
+  visNetwork \
+  googleCloudStorageR \
+  janitor \
+  qpdf \
+  RefManageR \
+  svMisc \
+  jose \
+  cubelyr \
+  rdryad \
+  doParallel \
+  piggyback \
+  arrow \
+  bibtex \
+  proto \
+  slam \
+  ape \
+  fasterize \
+  exactextractr \
+  RcppEigen \
+  jpeg \
+  interp \
+  latticeExtra \
+  hexbin \
+  prioritizr \
+  dygraphs \
+  ggridges \
+  GSODR \
+  gt \
+  leafem \
+  leaflet \
+  lubridate \
+  mapview \
+  plotly \
+  quarto \
+  raster \
+  rinat \
+  rmarkdown \
+  sf \
+  SPEI \
+  stars \
+  terra \
+  tidyterra \
+  xts \
+  reticulate \
+  cowplot \
+  appeears \
+  keyring \
+  filelock \
+  ncdf4 \
+  colourvalues \
+  kableExtra \
+  future \
+  viridis \
+  qs2 \
+  smoothr \
+  crew \
+  webshot2 \
+  memoise \
+  htmlwidgets \
+  patchwork \
+  languageserver \
+  parallelly \
+  gdalUtilities \
+  webshot
+EOF
 
 # r-universe / non-CRAN packages (still versioned by their published builds)
-RUN CRAN_URL="$$(cat /etc/R/cran-url)" \
- && R -e "options(repos = c( \
-            stan = Sys.getenv('R_UNIVERSE_STAN'), \
-            ropensci = Sys.getenv('R_UNIVERSE_ROPENSCI'), \
-            CRAN = '$${CRAN_URL}' \
-          )); \
-          install.packages(c('cmdstanr', 'posterior', 'bayesplot', 'geotargets', 'stantargets')); \
-          install.packages( \
-            'https://gitlab.rrz.uni-hamburg.de/helgejentsch/climdatdownloadr/-/archive/master/climdatdownloadr-master.tar.gz', \
-            repos = NULL, type = 'source' \
-          ); \
-          if (requireNamespace('webshot', quietly = TRUE)) webshot::install_phantomjs()"
+RUN <<'EOF'
+set -eux
+CRAN_URL="$(cat /etc/R/cran-url)"
+R -e "options(repos = c( \
+          stan = Sys.getenv('R_UNIVERSE_STAN'), \
+          ropensci = Sys.getenv('R_UNIVERSE_ROPENSCI'), \
+          CRAN = '${CRAN_URL}' \
+        )); \
+        install.packages(c('cmdstanr', 'posterior', 'bayesplot', 'geotargets', 'stantargets')); \
+        install.packages( \
+          'https://gitlab.rrz.uni-hamburg.de/helgejentsch/climdatdownloadr/-/archive/master/climdatdownloadr-master.tar.gz', \
+          repos = NULL, type = 'source' \
+        ); \
+        if (requireNamespace('webshot', quietly = TRUE)) webshot::install_phantomjs()"
+EOF
 
 # CmdStan under /opt (not $HOME) so Apptainer home binds do not hide it
 RUN mkdir -p /opt/cmdstan \
