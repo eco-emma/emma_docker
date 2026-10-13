@@ -102,14 +102,28 @@ RUN quarto install chrome-headless-shell
 # Point chromote (used by webshot2) at Quarto's headless shell.
 ENV CHROMOTE_CHROME=/root/.local/share/quarto/chrome-headless-shell/chrome-linux/headless_shell
 
-## Packages / tools not represented cleanly in CRAN lockfiles
-RUN R -e "if (!requireNamespace('remotes', quietly=TRUE)) install.packages('remotes', repos='https://packagemanager.posit.co/cran/2026-10-01'); \
-          remotes::install_github('futureverse/parallelly', ref='master', upgrade='never'); \
-          dir.create('/home/rstudio/.cmdstanr', recursive=TRUE); \
-          if (requireNamespace('cmdstanr', quietly=TRUE)) cmdstanr::install_cmdstan(dir='/home/rstudio/.cmdstanr'); \
-          remotes::install_github('ropensci/stantargets', upgrade='never'); \
-          install.packages('https://gitlab.rrz.uni-hamburg.de/helgejentsch/climdatdownloadr/-/archive/master/climdatdownloadr-master.tar.gz', repos = NULL, type = 'source'); \
-          if (requireNamespace('webshot', quietly=TRUE)) webshot::install_phantomjs(); \
-          remotes::install_github('JoshOBrien/gdalUtilities', upgrade='never')"
+## Post-renv extras (CmdStan binary + packages not in the lockfile)
+# Split layers so a late failure does not discard the expensive CmdStan build.
+# Prefer install.packages / r-universe over remotes::install_github: remotes
+# cannot convert packages restored by renv with RemoteType 'repository'
+# (failure: "can't convert package targets with RemoteType 'repository' to remote").
+RUN R -e "dir.create('/home/rstudio/.cmdstanr', recursive = TRUE); \
+          if (!requireNamespace('cmdstanr', quietly = TRUE)) \
+            stop('cmdstanr missing after renv::restore'); \
+          cmdstanr::install_cmdstan(dir = '/home/rstudio/.cmdstanr')"
+
+RUN R -e "options(repos = c( \
+            stan = 'https://stan-dev.r-universe.dev', \
+            ropensci = 'https://ropensci.r-universe.dev', \
+            RSPM = 'https://packagemanager.posit.co/cran/2026-10-01', \
+            CRAN = 'https://packagemanager.posit.co/cran/2026-10-01' \
+          )); \
+          install.packages('stantargets'); \
+          install.packages('gdalUtilities'); \
+          install.packages( \
+            'https://gitlab.rrz.uni-hamburg.de/helgejentsch/climdatdownloadr/-/archive/master/climdatdownloadr-master.tar.gz', \
+            repos = NULL, type = 'source' \
+          ); \
+          if (requireNamespace('webshot', quietly = TRUE)) webshot::install_phantomjs()"
 
 WORKDIR /home/rstudio
