@@ -1,6 +1,20 @@
 # EMMA Docker Container
 
+## R package management (renv)
 
+This repository owns the **canonical** `renv.lock` / `DESCRIPTION` for the
+`adamwilsonlab/emma` image. Sibling pipelines (`emma_report`, `emma_envdata`,
+`emma_model`) should mirror or restore against this lockfile rather than calling
+`update.packages()` in CI.
+
+- `DESCRIPTION` — declared Imports baked into the image
+- `renv.lock` — pinned versions (P3M snapshot `2026-10-01` + r-universe)
+- `pak.lock` — pak-format lock used to regenerate `renv.lock`
+- Dockerfile runs `renv::restore()` (no blanket package upgrade)
+
+To refresh packages: update `DESCRIPTION`, regenerate locks
+(`pak::lockfile_create("deps::.")` → convert/sync `renv.lock`), rebuild the
+image, then copy the new `renv.lock` into consuming repos.
 
 # Instructions
 

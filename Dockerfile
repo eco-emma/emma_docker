@@ -4,7 +4,7 @@ MAINTAINER "Adam M. Wilson" adamw@buffalo.edu
 # set display port to avoid crash
 ENV DISPLAY=:99
 
-## RUN apt-get remove $(tasksel --task-packages desktop) # from https://unix.stackexchange.com/questions/56316/can-i-remove-gui-from-debian
+## System libraries required by geospatial / EMMA R packages
 RUN apt-get update \
   && apt-get install -y \
     libv8-dev \
@@ -33,7 +33,7 @@ RUN apt-get update \
     tk-dev \
 	libsecret-1-0 \
 	libsecret-1-dev \
-	gh \	
+	gh \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
@@ -72,113 +72,44 @@ RUN ARCH=$(dpkg --print-architecture) && \
     bash miniforge.sh -b -p /opt/conda && \
     rm miniforge.sh
 
-RUN install2.r --error \
-    testthat \
-    remotes \
-    globals \
-    fs \
-    writexl \
-    rio \
-    tidyverse \
-    listenv \
-    RCurl \
-    questionr \
-    posterior \
-    bayesplot \
-    stringr \
-    knitr \
-    cptcity \
-    geojsonio \
-    targets \
-    tarchetypes \
-    visNetwork \
-    googleCloudStorageR \
-    janitor \
-    qpdf \
-    RefManageR \
-    svMisc \
-    geojsonio \
-    jose \
-    cubelyr \
-    rdryad \
-    doParallel \
-    piggyback \
-    arrow \
-    bibtex \
-    proto \
-    slam \
-    ape \
-    fasterize \
-    exactextractr \
-    RcppEigen \
-    jpeg \
-    interp \
-    latticeExtra \
-    hexbin \
-    prioritizr \
-    arrow \
-    tidyverse \
-    dygraphs \
-    ggridges \
-    GSODR \
-    gt \
-    leafem \
-    leaflet \
-    lubridate \
-    mapview \
-    piggyback \
-    plotly \
-    quarto \
-    raster \
-    rinat \
-    rmarkdown \
-    sf \
-    SPEI \
-    stars \
-    tarchetypes \
-    targets \
-    geotargets \
-	terra \
-    tidyterra \
-    xts \
-    reticulate \
-    cowplot \
-	appeears \
-	rdryad \
-	keyring \
-	filelock \
-	ncdf4 \
-	stars \
-	colourvalues \
-	kableExtra \
-	future \
-	viridis \
-	colourvalues \
-	qs2 \
-	smoothr \
-	crew \
-	webshot2 \
-	memoise \
-  	htmlwidgets \
-  	patchwork \
-	languageserver
+# ── R packages via renv (canonical lockfile for emma image + sibling repos) ──
+# DESCRIPTION + renv.lock are the source of truth; do not use update.packages
+# or an unpinned install2.r package list for the image library.
+WORKDIR /opt/emma
+COPY DESCRIPTION renv.lock .Rprofile ./
+COPY renv ./renv
+COPY pak.lock ./pak.lock
+
+ENV RENV_CONFIG_REPOS_OVERRIDE=
+ENV RENV_PATHS_CACHE=/opt/renv-cache
+ENV RENV_PATHS_LIBRARY=/usr/local/lib/R/site-library
+
+RUN mkdir -p /opt/renv-cache \
+ && R -e "install.packages('renv', repos = 'https://cloud.r-project.org'); \
+          renv::consent(provided = TRUE); \
+          options(repos = c( \
+            stan = 'https://stan-dev.r-universe.dev', \
+            ropensci = 'https://ropensci.r-universe.dev', \
+            RSPM = 'https://packagemanager.posit.co/cran/2026-10-01', \
+            CRAN = 'https://packagemanager.posit.co/cran/2026-10-01' \
+          )); \
+          renv::restore(project = '/opt/emma', prompt = FALSE, clean = FALSE)"
 
 # Install Quarto's bundled chrome-headless-shell (a real Chromium binary, works
 # in Docker unlike the Ubuntu 'chromium' snap stub).
 # Must run AFTER quarto is installed so the 'quarto' CLI is available.
 RUN quarto install chrome-headless-shell
 # Point chromote (used by webshot2) at Quarto's headless shell.
-# This path is where 'quarto install chrome-headless-shell' places the binary.
 ENV CHROMOTE_CHROME=/root/.local/share/quarto/chrome-headless-shell/chrome-linux/headless_shell
 
-	
-## install additional libraries from custom repos including cmdstanr - note the path below is important for loading library in container
-RUN R -e "remotes::install_github('futureverse/parallelly', ref='master'); \
-          install.packages('cmdstanr', repos = c('https://stan-dev.r-universe.dev', getOption('repos'))) ; \
-          dir.create('/home/rstudio/.cmdstanr', recursive=T); cmdstanr::install_cmdstan(dir='/home/rstudio/.cmdstanr'); \
-          remotes::install_github('ropensci/stantargets'); \
-          install.packages('geotargets', repos = c('https://ropensci.r-universe.dev', 'https://cran.r-project.org')); \
+## Packages / tools not represented cleanly in CRAN lockfiles
+RUN R -e "if (!requireNamespace('remotes', quietly=TRUE)) install.packages('remotes', repos='https://packagemanager.posit.co/cran/2026-10-01'); \
+          remotes::install_github('futureverse/parallelly', ref='master', upgrade='never'); \
+          dir.create('/home/rstudio/.cmdstanr', recursive=TRUE); \
+          if (requireNamespace('cmdstanr', quietly=TRUE)) cmdstanr::install_cmdstan(dir='/home/rstudio/.cmdstanr'); \
+          remotes::install_github('ropensci/stantargets', upgrade='never'); \
           install.packages('https://gitlab.rrz.uni-hamburg.de/helgejentsch/climdatdownloadr/-/archive/master/climdatdownloadr-master.tar.gz', repos = NULL, type = 'source'); \
-          install.packages('webshot'); \
-          webshot::install_phantomjs(); \
-          devtools::install_github('JoshOBrien/gdalUtilities')"
+          if (requireNamespace('webshot', quietly=TRUE)) webshot::install_phantomjs(); \
+          remotes::install_github('JoshOBrien/gdalUtilities', upgrade='never')"
+
+WORKDIR /home/rstudio
