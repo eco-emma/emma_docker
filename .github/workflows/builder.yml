@@ -12,10 +12,14 @@ jobs:
   docker:
     name: Create Docker image and push to Dockerhub
     runs-on: ubuntu-latest
+    # Multi-arch (esp. arm64 via QEMU) regularly exceeds the 6h GHA limit when
+    # compiling CmdStan + many R packages. PRs validate amd64 only; master
+    # publishes the multi-arch image to DockerHub.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Set up QEMU
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -33,12 +37,13 @@ jobs:
           context: .
           file: ./Dockerfile
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-          platforms: linux/amd64,linux/arm64
+          # PR: native amd64 only (finish within wall-clock). Master: multi-arch.
+          platforms: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
           tags: |
               adamwilsonlab/emma:latest
               adamwilsonlab/emma:${{ github.sha }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max        
+          cache-to: type=gha,mode=max
         env:
           ACTIONS_RUNNER_DEBUG: true
 
