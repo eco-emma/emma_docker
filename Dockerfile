@@ -124,6 +124,7 @@ install2.r --error -r "${CRAN_URL}" \
   knitr \
   cptcity \
   geojsonio \
+  geojsonsf \
   targets \
   tarchetypes \
   visNetwork \
@@ -136,8 +137,10 @@ install2.r --error -r "${CRAN_URL}" \
   cubelyr \
   rdryad \
   doParallel \
+  devtools \
   piggyback \
   arrow \
+  sfarrow \
   bibtex \
   proto \
   slam \
@@ -154,6 +157,10 @@ install2.r --error -r "${CRAN_URL}" \
   ggridges \
   GSODR \
   gt \
+  gh \
+  httr \
+  httr2 \
+  jsonlite \
   leafem \
   leaflet \
   lubridate \
