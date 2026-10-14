@@ -17,6 +17,19 @@ host-side `renv::restore()` for pipelines — always run inside this image.
 To change package versions: edit the Dockerfile pin / package list, rebuild,
 push `adamwilsonlab/emma:latest` (master builder workflow).
 
+### Architecture
+
+`adamwilsonlab/emma:latest` is published as **`linux/amd64` only**. That covers
+laptop Docker (Intel/AMD), GitHub Actions `ubuntu-latest`, and typical x86_64
+HPC Singularity pulls.
+
+`linux/arm64` is **not** built in CI today: emulating arm64 with QEMU on
+`ubuntu-latest` exceeds the 6-hour Actions limit (CmdStan + large R library).
+Apple Silicon users can run the amd64 image via Docker Desktop’s emulation, or
+build locally (`docker build --platform linux/arm64 .`). A native arm64 CI
+runner (or a separate arm64 job that merges a multi-arch manifest) is the
+intended follow-up if we need a first-class arm64 `latest`.
+
 ---
 
 ## Laptop (Docker)
